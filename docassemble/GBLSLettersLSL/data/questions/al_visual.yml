@@ -1,0 +1,469 @@
+---
+default screen parts:
+  title: |
+    ${ all_variables(special='metadata').get('title', AL_ORGANIZATION_TITLE) }
+  short title: |
+    ${ all_variables(special='metadata').get('short title', AL_ORGANIZATION_TITLE) }
+  title url: |
+    ${ all_variables(special='metadata').get('title url', AL_ORGANIZATION_HOMEPAGE) }
+  exit url: |
+    ${ all_variables(special='metadata').get('exit url', AL_ORGANIZATION_HOMEPAGE) }
+  continue button label: |
+    Next
+  back button label: |
+    Undo
+  corner back button label: |
+    Undo
+  pre: |
+    % if get_config('debug'):
+    `id: ${ user_info().question_id }`  
+    `Variable triggering this screen: ${ user_info().variable }`  
+    `Package: ${ user_info().package } ${ package_version_number }; ${ al_version }`
+    <div data-variable="${ encode_name(str( user_info().variable )) }" id="sought_variable" aria-hidden="true" style="display: none;"></div>
+    % endif
+  # We need both pre and post until old interviews are updated to v2 of the testing framework or v1 of the testing framework is updated. In future, we will need this in `post` so that it will work on signature pages.
+  post: |
+    <div data-variable="${ encode_name(str( user_info().variable )) }" id="trigger" aria-hidden="true" style="display: none;"></div>
+---
+initial: True
+code: |
+  # Set the dropdown/hamburger menu items
+  # by default we just add a "Start over" link
+  if _internal.get('steps') > 1:
+    menu_items = al_menu_items
+  else:
+    # Skip the "start over", download, and exit and erase menu item
+    if al_enable_incomplete_downloads:
+      menu_items = al_menu_items[3:]
+    else:
+      menu_items = al_menu_items[2:]
+---
+reconsider: True
+code: |
+  al_menu_items_tmp = [
+    {"url": url_ask(['al_start_over_confirmation','al_start_over']),
+    "label": "Start over"
+    },
+    {
+      "url": url_ask(['al_exit_logout_confirmation', 'al_exit_logout']),
+      "label": "Exit and delete my answers"
+    },
+  ]
+
+  if al_enable_incomplete_downloads:
+    al_menu_items_tmp.append({
+        "url": url_action('al_error_action_download_screen'), 
+        "label": "Download current progress"
+    })
+  
+  # Answer set feature is behind a server-wide configuration option
+  if get_config('assembly line',{}).get('enable answer sets'):
+    al_menu_items_tmp.extend([
+    {"url": url_ask(["al_sessions_snapshot_label", {"recompute": ["al_sessions_save_session_snapshot"]}, "al_sessions_save_status"]),
+    "label": "Save answer set"
+    },
+    action_menu_item("Load answer set", "al_load_saved_session"),
+  ]
+  )
+  
+  if get_config('assembly line',{}).get('enable answer set imports'):
+    al_menu_items_tmp.append(
+      {"url": url_ask(["al_sessions_json_file", {"recompute": ["al_sessions_import_json"]}, "al_sessions_load_status"]),
+      "label": "Import answer set"
+      }
+    )
+    
+  al_menu_items = al_menu_items_tmp
+  del al_menu_items_tmp
+---
+event: al_exit_logout
+code: |
+  command("exit_logout")
+---
+event: al_start_over
+code: |
+  command('new_session')
+---
+code: |
+  send_icon = "envelope"
+---
+code: |
+  # Override this in your package where possible, so that 
+  # features that depend on the package name will work
+  # from the playground
+  package_name = str(user_info().package)
+---
+code: |
+  if package_name and not "playground" in package_name:
+    github_repo_name = package_name.replace('.','-')
+  else:    
+    github_repo_name = "docassemble-AssemblyLine"
+---
+code: |
+  # Username or organization name for Github repositories
+  # Used to direct feedback to the right place and to check for
+  # the last commit date.
+  github_user = get_config("github issues",{}).get("default repository owner","").strip() or "suffolklitlab"
+---
+code: |
+  feedback_form = "docassemble.AssemblyLine:feedback.yml"
+---
+default screen parts:
+  under: |
+    % if not user_logged_in():
+    [:sign-in-alt: Sign-in](${url_of('login', next=interview_url())}) or [register](${url_of('register', next=interview_url())}) to save your progress (optional).
+    % endif
+  footer: |
+    [:share-alt-square: Share](${ url_ask([{'undefine': ['al_sharing_type','al_how_share_link']}, 'al_share_form_screen', {'recompute': ['al_did_share_form']}, 'al_share_results']) })
+    [:info-circle: About](${ url_action('about_this_interview') })
+    [:comment-dots: Feedback](${ feedback_link(user_info(), i=feedback_form, github_repo=github_repo_name, github_user=github_user, package_version=package_version_number) } ){:target="_blank"}
+---
+image sets:
+  smashicons:
+    attribution: |
+      Icon made by
+      [Smashicons](https://www.flaticon.com/authors/smashicons)
+    images:
+      form: sign-form.svg
+      form-lineal: sign-form-lineal.svg
+---
+continue button field: al_share_form_screen
+id: al share form screen
+question: |
+  Share this website
+fields:
+  - What do you want to do?: al_sharing_type
+    datatype: radio
+    choices:
+      - Tell a friend about this website: tell_friend
+      - Share my answers and progress with someone: share_answers
+  -  How do you want to share the link?: al_how_share_link
+     datatype: radio
+     choices:
+       - Email or text message: email_or_sms
+       - Just show me the link. I will share it myself.: link_only
+       - Export my answers to a file: download_json
+     js show if: |
+       val("al_sharing_type") === "tell_friend" || val("al_sharing_type") === "share_answers" 
+  - note: |
+      **Note**: the person you share this link with will be able to see and
+      edit your answers on this form.
+    js show if: |
+      val("al_sharing_type") === "share_answers" &&  ( val("al_how_share_link") === "email_or_sms" || val("al_how_share_link") === "link_only" )
+  - note: |
+      You can copy and share this link
+      
+      ${ copy_button_html(  interview_url(i=user_info().filename, style="short", new_session=1), label=al_copy_button_label.show(), tooltip_inert_text=al_copy_button_tooltip_inert_text.show(), tooltip_copied_text = al_copy_button_tooltip_copied_text.show() ) }
+    js show if: |
+      val("al_sharing_type") === "tell_friend" && val("al_how_share_link") === "link_only"      
+  - note: |
+      You can copy and share this link (expires in 48 hours)
+      ${ copy_button_html( interview_url(temporary=48), label=al_copy_button_label.show(), tooltip_inert_text=al_copy_button_tooltip_inert_text.show(), tooltip_copied_text = al_copy_button_tooltip_copied_text.show()) }
+    js show if: |
+      val("al_sharing_type") === "share_answers" && val("al_how_share_link") === "link_only"
+  - Email or phone number you want to send this to: share_interview_contact_method
+    validate: is_phone_or_email
+    show if:
+      variable: al_how_share_link
+      is: email_or_sms
+  - Message: tell_a_friend_message
+    datatype: area
+    default: |
+      Hi, I wanted to let you know about a free website that I learned about:
+      "${single_paragraph(all_variables(special='metadata').get('title', AL_ORGANIZATION_TITLE))}". I think this might
+      help you, too. Check it out at the link in this message:       
+    js show if: |
+      val("al_how_share_link") === "email_or_sms" && val("al_sharing_type") === "tell_friend"
+  - Message: share_interview_answers_message
+    datatype: area
+    default: |
+      Hi, I wanted to share my progress on a form on "${ AL_ORGANIZATION_TITLE }".
+      If you click this link, you can follow along or finish the form for me.
+    js show if: |
+      val("al_how_share_link") === "email_or_sms" && val("al_sharing_type") === "share_answers"      
+  - Your name: al_share_form_from_name
+    default: ${ str(users[0]) if defined('users[0].name.first') else '' } 
+    show if:
+      variable: al_how_share_link
+      is: email_or_sms
+  - note: |
+      <a class="btn btn-primary btn-sm btn-secondary" href="${ export_interview_variables().url_for(attachment=True) }" role="button"><i class="far fa-file-code"></i> Export in JSON format</a>  
+    show if:
+      variable: al_how_share_link
+      is: download_json
+back button label: |
+  Back to your form
+---
+id: Results of sharing
+continue button field: al_share_results
+question: |
+  % if al_sharing_type == 'tell_friend':
+  Thanks for sharing!
+  % elif al_how_share_link == 'link_only':
+  Do not forget to send the link!
+  % else:
+  Your message is on its way
+  % endif
+subquestion: |
+  % if al_sharing_type == 'share_answers':
+  **Keep in mind**: when you make a change to your form, the
+  person you shared it with will see the change you made. You will
+  also see any changes that person makes.
+  % endif
+  
+  Click "Next" to go back to your form in progress.
+---
+need:
+  - al_share_answers_message_template
+  - al_tell_a_friend_message_template
+code: |
+  if al_how_share_link == 'email_or_sms':
+    if phone_number_is_valid(share_interview_contact_method):
+      if al_sharing_type == "tell_friend":
+        success = send_sms(to=share_interview_contact_method, template=al_tell_a_friend_message_template)
+      else:
+        success = send_sms(to=share_interview_contact_method, template=al_share_answers_message_template)
+    else:
+      if al_sharing_type == "tell_friend":
+        success = send_email(to=share_interview_contact_method, template=al_tell_a_friend_message_template)
+      else:
+        success = send_email(to=share_interview_contact_method, template=al_share_answers_message_template)
+  al_did_share_form = True
+---
+##########
+# Copy button strings for translation
+---
+template: al_copy_button_label
+content: |
+  Copy
+---
+template: al_copy_button_tooltip_inert_text
+content: |
+  Copy to clipboard
+---
+template: al_copy_button_tooltip_copied_text
+content: |
+  Copied!
+---
+##############
+# Sharing email templates
+---
+template: al_share_answers_message_template
+subject: |
+  ${ AL_ORGANIZATION_TITLE } form from ${ al_share_form_from_name }
+content: |
+  ${ share_interview_answers_message }
+  Click the link below to view and edit ${ al_share_form_from_name }'s
+  progress so far:
+  
+  ${ interview_url(temporary=48) }
+---
+template: al_tell_a_friend_message_template
+subject: |
+  ${ al_share_form_from_name } wants to tell you about ${ AL_ORGANIZATION_TITLE }
+content: |
+  ${ tell_a_friend_message }
+  ${ interview_url(i=user_info().filename, style="short", new_session=1) }
+---
+code: |
+  github_url = "https://github.com/" + github_user + "/" + github_repo_name
+---
+code: |
+  res = github_modified_date(github_user, github_repo_name)
+  if res:
+    package_updated_on = res.format('yyyy-MM-dd')
+  else:
+    package_updated_on = None
+---
+event: about_this_interview
+id: about AssemblyLine project
+question: |
+  About this form
+# TODO: I think people might want more form-specific info here?
+# It is easy to copy and edit this event without removing the version
+# information. We may consider using the form description, adding a 
+# thumbnail of the original form, etc. at some point.
+subquestion: |  
+  ${ about_this_interview_version_info }
+back button label: |
+  Back to form
+---
+template: about_this_interview_version_info
+content: |
+  "${all_variables(special='metadata').get('title','').rstrip()}" version 
+  `${ package_version_number }`; AssemblyLine version `${ al_version }`.
+
+  % if interview_metadata.get("main_interview_key"):
+    <%
+      MAIN_METADATA = interview_metadata[interview_metadata["main_interview_key"]]
+    %>
+  % elif len(interview_metadata) > 1:    
+    <% 
+      del(interview_metadata["main_interview_key"]) # DADict creates the key on lookup above
+      MAIN_METADATA = next(iter(interview_metadata.values())) 
+    %>
+  % else:
+    <% MAIN_METADATA = {} %>
+  % endif
+  % if MAIN_METADATA.get("original_form") and not MAIN_METADATA.get("original_form").strip() == "None" and MAIN_METADATA.get("original_form").startswith("http"):
+  [View the original version of this form](${ MAIN_METADATA.get("original_form") }).
+  % endif
+  
+  % if package_updated_on:
+  Last updated on ${ package_updated_on }. [:fab-fa-github: View code on GitHub](${ github_url }).  
+  % endif
+
+  [Submit feedback](${ interview_url(i=feedback_form, github_repo=github_repo_name, github_user=github_user, variable=user_info().variable, question_id=user_info().question_id, package_version=package_version_number, local=False,reset=1) } ){:target="_blank"}.
+
+  % if all_variables(special='metadata').get('authors'):
+  This form was authored by ${ comma_and_list(all_variables(special='metadata').get('authors')) }.
+  % endif
+  
+  "${all_variables(special='metadata').get('title','').rstrip()}" includes code 
+  from the [Document Assembly Line project](https://suffolklitlab.org/docassemble-AssemblyLine-documentation/docs/). 
+---
+id: start a new session
+question: |
+  Do you want to start over?
+subquestion: |
+  % if not user_logged_in():
+  You may lose access to your current answers. Make sure you have downloaded
+  any forms that you need.
+  % else:
+  You can still access your current answers by visiting the "My interviews"
+  page.
+  % endif
+  
+  Click "Start over" to start a new copy of the form you are working on,
+  or "Back" if you want to keep working.
+back button label: |
+  Back
+continue button label: |
+  Start over
+continue button field: al_start_over_confirmation
+---
+id: exit and erase answers
+question: |
+  Do you want to delete your answers?
+subquestion: |
+  Your progress on this document will be completely erased. Any
+  actions that were scheduled, such as reminders from this website,
+  will also be removed.
+  
+  Click "Exit and delete my answers" to delete your progress,
+  or "Back" if you want to keep working.
+back button label: |
+  Back
+continue button label: |
+  Exit and delete my answers
+continue button field: al_exit_logout_confirmation
+---
+################################### Custom error action ################################
+---
+metadata:
+  error action: al_custom_error_action
+---
+objects:
+  - MAIN_METADATA: DAEmpty()
+---
+id: custom error action
+event: al_custom_error_action
+decoration: bug
+question: |
+  Something went wrong
+subquestion: |
+  % if interview_metadata.get("main_interview_key"):
+    <%
+      MAIN_METADATA = interview_metadata[interview_metadata["main_interview_key"]]
+    %>
+  % elif len(interview_metadata) > 1:    
+    <% 
+      del(interview_metadata["main_interview_key"]) # DADict creates the key on lookup above
+      MAIN_METADATA = next(iter(interview_metadata.values())) 
+    %>
+  % else:
+    <% MAIN_METADATA = {} %>
+  % endif
+
+  We ran into an error when we tried to load this screen.
+
+  You can try one of these steps to recover your work:
+
+  * Click "Back" and try again.
+  % if al_enable_error_action_feedback_link:
+  * [:comment-dots: Tell us what happened](${ feedback_link(user_info(), i=feedback_form, github_repo=github_repo_name, github_user=github_user, package_version=package_version_number) } ){:target="_blank"}
+  % endif
+  % if al_enable_incomplete_downloads:
+  * Try to [download your work in progress](${ url_action("al_error_action_download_screen") })
+  % endif
+  % if MAIN_METADATA.get("original_form") and not MAIN_METADATA.get("original_form").strip() == "None":
+  * [Download a blank "${ all_variables(special='metadata').get("title").strip() }"](${ MAIN_METADATA.get("original_form") } )
+  % endif
+  * Visit the [${ AL_ORGANIZATION_TITLE } home page](${ AL_ORGANIZATION_HOMEPAGE }) and try another interview
+  % if al_show_email_to_user_on_errors and get_config("error notification email"):
+  * [Send us an email](mailto:${ get_config("error notification email") }?subject=User%20error%20report%3A%20${ all_variables(special='metadata').get("title") }%20${ user_info().filename }) (Note: you may not get a reply)
+  % endif
+  % for al_opt in al_custom_error_options:
+  * ${ al_opt }
+  % endfor
+
+  % if not get_config("verbose error messages") == False:
+  ${ collapse_template(al_formatted_error_message) }
+  % endif
+back button label: Back
+buttons:
+  - Exit: leave
+    url: ${ AL_ORGANIZATION_HOMEPAGE }
+  - Start over: restart
+---
+code: |
+  al_show_email_to_user_on_errors = get_config("assembly line", {}).get("show email to user on errors")
+---
+code: |
+  al_enable_incomplete_downloads = get_config("assembly line", {}).get("enable incomplete downloads")
+---
+code: |
+  al_enable_error_action_feedback_link = get_config("assembly line", {}).get("enable error action feedback link")
+---
+code: |
+  # Provide a list of strings
+  al_custom_error_options = get_config("assembly line", {}).get("custom error actions",[])
+---
+event: al_error_action_download_screen
+id: emergency download screen
+decoration: triangle-exclamation
+question: |
+  Here is your work in progress
+subquestion: |
+  **Warning**: these documents may not be complete. Look each document over carefully and enter
+  any information that is missing once you have downloaded the documents.
+
+  **It is possible that the missing information may make this document unenforceable.**
+
+  Here is your current progress on the "${ all_variables(special='metadata').get("title").strip() }" documents you started:
+
+  ${ al_user_bundle.download_list_html(key="emergency_download") }
+buttons:
+  - Leave: leave
+  - Start over: restart
+---
+template: al_formatted_error_message
+subject: |
+  Technical information
+content: |
+  <h2 class="h4">${ word("Error") }</h2>
+  ${ action_argument('error_message') }
+
+  % if get_config("debug") and action_argument("error_history"):
+  <h2 class="h4">${ word("History") }</h2>
+  <pre>
+  ${ action_argument("error_history") }
+  </pre>
+  % endif
+
+  % if get_config("debug") and action_argument("error_trace"):
+  <h2 class="h4">${ word("Log") }</h2>
+  <pre>
+  ${ action_argument("error_trace")}
+  </pre>
+  % endif

@@ -1,0 +1,281 @@
+include:
+  - docassemble.AssemblyLine:assembly_line.yml
+  - shared.yml
+  - theme.yml
+  - LSLink.yml
+---
+objects:
+  - clients: ALPeopleList.using(there_are_any=True, complete_attribute='complete')
+  - attorneys: ALPeopleList.using(there_are_any=True, complete_attribute='complete')
+  - documents: ALPeopleList
+---
+metadata:
+  title: |
+    Letter Suite for Greater Boston Legal Services  
+  short title: >-
+    Letter Suite 
+  description: |-
+    Letter Suite
+  tags: []
+  authors:
+    - Lemma Legal
+    - Quinten Steenhuis
+    - Mia Bonardi
+    - Stavros Constantinou
+    - Hayden McGuire
+    - Chris Emrich
+---
+###################### Main Order ######################
+mandatory: True
+code: |
+  checked_for_stashed_data
+  set_legalserver_site
+
+  # If you need everything, you can call `parse_all_legalserver_data`
+  # This is a little faster since it doesn't get extra records:
+  raise_errors_getting_legalserver_data
+  parse_client_data
+  phone_numbers_collected
+  parse_all_legalserver_data
+  attorneys[0].name.first
+  unit
+  doc_list 
+  
+  if doc_list['No Contact Letter']:
+    interview_order_no_contact_letter
+  
+  if doc_list['General Release']:
+    interview_order_general_release
+
+  if doc_list['Plain Language Retainer']:
+    interview_order_plain_langauge_retainer
+  
+  if doc_list['Closing Letter']:
+    interview_order_closing_letter
+  
+  if doc_list['Client Letter Items for Intake/Interview']:
+    interview_order_client_letter_documents_for_interview
+
+  if doc_list['Affirmative Debt Collection Retainer']:
+    interview_affirmative_debt_collection_retainer
+    
+  if doc_list['Client Letter Appointment Reminder']:
+    interview_order_client_letter_appointment_reminder
+    
+  if doc_list['Client Letter Final Credit Report']:
+    interview_order_client_letter_final_credit_report
+      
+  if doc_list['Client Letter 314 Bankruptcy Meeting']:
+    interview_order_client_letter_re_telephonic
+  
+  if doc_list['Client Letter Bankruptcy Discharge']:
+    interview_order_client_letter_bankruptcy_discharge
+      
+  signature_date
+  gbls_download
+---
+id: select unit
+question: |
+  What unit are you drafting forms for?
+fields: 
+  - Unit: unit
+    choices:
+      - Consumer Rights Unit
+      - Immigration Law Unit
+      - Family Law Unit
+      - CORI & Re-Entry Unit
+      - Elder, Health, and Disability Unit
+      - Housing Unit
+      - Welfare Unit
+      - Employment Unit
+      - Civil Legal Aid for Victims of Crime
+      - The Asian Outreach Center
+      - CASLS
+---
+code: |
+  unit = attorneys[0].program
+---
+id: available forms
+continue button field: available_forms
+question: |
+  Available Forms
+subquestion: |
+  Consumer Rights Unit
+    
+    * Affirmative Debt Collection Retainer
+    * Client Letter Final Credit Report 
+    * Client Letter re Telephonic Meeting for 314 Bankruptcy
+    * Client Letter Bankruptcy Discharge
+    * Closing Letter
+    
+  Immigration Law Unit
+    
+    * Client Appointment Reminder 
+    
+  Universal Forms
+    
+    * Client Letter Documents for Interview/Intake
+    * No Contact Letter
+    * General Release
+    * Plain Language Retainer
+---
+# show if for unit specific forms?
+# unit will be easy LS variable so we should condition on it to decrease UI clutter
+id: gbls document list
+question: |
+  Select the documents you need produced. 
+fields:
+  - Documents: doc_list
+    datatype: checkboxes
+    choices: 
+      - Affirmative Debt Collection Retainer
+      - Client Letter Appointment Reminder
+      - Client Letter Items for Intake/Interview
+      - Client Letter Final Credit Report
+      - Client Letter 314 Bankruptcy Meeting
+      - Client Letter Bankruptcy Discharge
+      - Closing Letter
+      - General Release
+      - Plain Language Retainer
+      - No Contact Letter
+    none of the above: false
+---
+code: |
+  Affirmative_Debt_Collection_Retainer.enabled = doc_list['Affirmative Debt Collection Retainer'] 
+---
+code: |
+  Client_Appointment_Reminder.enabled = doc_list['Client Letter Appointment Reminder']   
+---
+code: |
+  Closing_letter.enabled = doc_list['Closing Letter']   
+---
+code: |
+  General_Release.enabled = doc_list['General Release']
+---
+code: |
+  Letter_to_Client_Final_Credit_Report.enabled = doc_list['Client Letter Final Credit Report']
+---
+code: |
+  Letter_to_Client_re_Telephonic.enabled = doc_list['Client Letter 314 Bankruptcy Meeting']   
+---
+code: |
+ Letter_to_client_sending_Discharge.enabled = doc_list['Client Letter Bankruptcy Discharge']   
+---
+code: |
+  Letter_to_client_to_prepare_for_interview.enabled = doc_list['Client Letter Items for Intake/Interview']
+---
+code: |
+  No_Contact_Letter.enabled = doc_list['No Contact Letter']  
+---
+code: |
+  Plain_Language_Retainer.enabled = doc_list['Plain Language Retainer']
+---
+attachments:
+  - name: Affirmative Debt Collection 
+    filename: Affirmative_Debt_Collection_Retainer.docx    
+    variable name: Affirmative_Debt_Collection_Retainer[i]      
+    skip undefined: True
+    docx template file: Affirmative_Debt_Collection_Retainer.docx 
+---
+attachments:    
+  - name: Client Appointment Reminder 
+    filename: Client_Appointment_Reminder.docx 
+    variable name: Client_Appointment_Reminder[i]      
+    skip undefined: True
+    docx template file: Client_Appointment_Reminder.docx
+---
+attachments:  
+  - name: Closing letter GLBS LL
+    filename: Closing_letter.docx   
+    variable name: Closing_letter[i]     
+    skip undefined: True
+    docx template file: Closing_letter.docx
+---
+attachments:    
+  - name: General Release 
+    filename: General_Release.docx  
+    variable name: General_Release[i]      
+    skip undefined: True
+    docx template file: General_Release.docx
+---
+attachments:    
+  - name: Letter to Client Final Credit Report
+    filename: Letter_to_Client_Final_Credit_Report.docx  
+    variable name: Letter_to_Client_Final_Credit_Report[i]      
+    skip undefined: True
+    docx template file: Letter_to_Client_Final_Credit_Report.docx
+---
+attachments:
+  - name: Letter to Client re Telephonic
+    filename: Letter_to_Client_re_Telephonic.docx  
+    variable name: Letter_to_Client_re_Telephonic[i]      
+    skip undefined: True
+    docx template file: Letter_to_Client_re_Telephonic.docx
+---
+attachments:    
+  - name: Letter to client sending Discharge
+    filename: Letter_to_client_sending_Discharge.docx  
+    variable name: Letter_to_client_sending_Discharge[i]      
+    skip undefined: True
+    docx template file: Letter_to_client_sending_Discharge.docx  
+---
+attachments:    
+  - name: Letter to client to prepare for interview
+    filename: Letter_to_client_to_prepare_for_interview.docx  
+    variable name: Letter_to_client_to_prepare_for_interview[i]      
+    skip undefined: True
+    docx template file: Letter_to_client_to_prepare_for_interview.docx
+---
+attachments:    
+  - name: No Contact Letter
+    filename: No_Contact_Letter.docx  
+    variable name: No_Contact_Letter[i]      
+    skip undefined: True
+    docx template file: No_Contact_Letter.docx
+---
+attachments:    
+  - name: Plain Language Retainer
+    filename: Plain_Language_Retainer.docx  
+    variable name: Plain_Language_Retainer[i]      
+    skip undefined: True
+    docx template file: Plain_Language_Retainer.docx
+---
+objects:
+  - Plain_Language_Retainer: ALDocument.using(title="Plain Language Retainer", filename="Plain_Language_Retainer.docx", has_addendum=False, default_overflow_message=AL_DEFAULT_OVERFLOW_MESSAGE)
+  
+  - No_Contact_Letter: ALDocument.using(title="No Contact Letter", filename="No_Contact_Letter.docx", has_addendum=False, default_overflow_message=AL_DEFAULT_OVERFLOW_MESSAGE)
+  
+  - Letter_to_client_to_prepare_for_interview: ALDocument.using(title="Client Letter to prepare for interview", filename="Letter_to_client_to_prepare_for_interview.docx", has_addendum=False, default_overflow_message=AL_DEFAULT_OVERFLOW_MESSAGE)
+  
+  - Letter_to_client_sending_Discharge: ALDocument.using(title="Client Letter sending Discharge", filename="Letter_to_client_sending_Discharge.docx", has_addendum=False, default_overflow_message=AL_DEFAULT_OVERFLOW_MESSAGE)
+  
+  - Letter_to_Client_re_Telephonic: ALDocument.using(title=" Client Letter re Telephonic", filename="Letter_to_Client_re_Telephonic.docx", has_addendum=False, default_overflow_message=AL_DEFAULT_OVERFLOW_MESSAGE)
+  
+  - Letter_to_Client_Final_Credit_Report: ALDocument.using(title="Client Letter Final Credit Report", filename="Letter_to_Client_Final_Credit_Report.docx", has_addendum=False, default_overflow_message=AL_DEFAULT_OVERFLOW_MESSAGE)
+  
+  - General_Release: ALDocument.using(title="General Release ", filename="General_Release.docx", has_addendum=False, default_overflow_message=AL_DEFAULT_OVERFLOW_MESSAGE)
+  
+  - Closing_letter: ALDocument.using(title="Closing Letter", filename="Closing_letter.docx", has_addendum=False, default_overflow_message=AL_DEFAULT_OVERFLOW_MESSAGE)
+  
+  - Client_Appointment_Reminder: ALDocument.using(title="Client Letter Appointment Reminder", filename="Client_Appointment_Reminder.docx", has_addendum=False, default_overflow_message=AL_DEFAULT_OVERFLOW_MESSAGE)
+  
+  - Affirmative_Debt_Collection_Retainer: ALDocument.using(title="Affirmative Debt Collection Retainer", filename="Affirmative_Debt_Collection_Retainer.docx", has_addendum=False, default_overflow_message=AL_DEFAULT_OVERFLOW_MESSAGE)
+---
+objects:
+  - al_court_bundle: ALDocumentBundle.using(
+      elements=[
+        Plain_Language_Retainer,
+        Letter_to_client_to_prepare_for_interview,
+        Letter_to_client_sending_Discharge,
+        No_Contact_Letter,
+        Letter_to_Client_re_Telephonic,
+        Letter_to_Client_Final_Credit_Report,
+        General_Release, Closing_letter,
+        Client_Appointment_Reminder,
+        Affirmative_Debt_Collection_Retainer
+       ], 
+       filename="All forms.docx",
+       title="All forms",
+       enabled = True
+     ) 
+---

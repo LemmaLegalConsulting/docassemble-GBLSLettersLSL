@@ -1,0 +1,245 @@
+---
+# Provide a replacement for the /interviews endpoint in Docassemble.
+# This version is faster than the native version and supports metadata for each interview (including form progress)
+comment: |
+  Customize by:
+  1. Editing the global configuration (see below), or
+  2. Including this file and overriding the default values in a replacement YAML file
+
+  Relevant options and defaults:
+
+  app homepage: https://courtformsonline.org
+  assembly line:
+    enable answer sets: True
+    interview list:
+      page title: In progress forms # Title of the tab in your browser
+      page question: In progress forms
+      page subquestion: null
+      new form label: Start a new form
+      new form url: https://courtformsonline.org
+      logo url: null # Defaults to `app homepage`
+      logo image url: https://app.yourserver.org/packagestatic/docassemble.AssemblyLine/ma_logo.png
+      logo image alt: Logo
+      answer sets title: Answer sets
+      logo title row 1: null # Defaults to `interview page title`
+      logo title row 2: null # Defaults to `interview page heading`
+      exclude from interview list:
+        - docassemble.AssemblyLine:data/questions/al_saved_sessions_store.yml
+        - docassemble.AssemblyLine:data/questions/interview_list.yml
+
+  interview page title, interview page heading, interview page pre, logo url, interview page url, and new form url
+  can also be set to a dictionary of languages, like:
+    interview page title:
+      en: In progress forms
+      es: Formularios en progreso
+
+  These deprecated configuration options will also be respected at a lower priority:
+
+  new form url: https://courtformsonline.org
+  assembly line:
+    exclude from interview list:
+      - docassemble.AssemblyLine:data/questions/al_saved_sessions_store.yml
+      - docassemble.AssemblyLine:data/questions/al_saved_sessions_store.yml
+  
+  As will the following options from the global config:
+    interview page title
+    interview page heading
+    interview page pre
+
+  Some authors will prefer to customize this page by importing it and overriding the default values
+  in the YAML file rather than the global configuration. This is slightly more advance than editing
+  the configuration, but may be just as easy to maintain.
+
+  To do this, make a new YAML file and include your custom theme/settings YAML.
+  It's important to include your theme AFTER the interview list page:
+  
+  e.g., my_new_interview_list.yml would only need to contain:
+  ---
+  include:
+    - docassemble.AssemblyLine:data/questions/interview_list.yml
+    - docassemble.MyState:my_custom_theme.yml
+  ---
+  metadata:
+    title: |
+      In progress forms
+    short title: |
+      In progress forms
+  
+
+  Then you would set the following in your global config:
+  interview list: docassemble.MyState:my_new_interview_list.yml
+
+  In some instances, this may be all that is required to use your branding on the
+  interview list page. You can individually override additional variables as follows:
+
+    * PAGE_QUESTION
+    * PAGE_SUBQUESTION
+    * NEW_FORM_LABEL
+    * NEW_FORM_URL
+    * al_sessions_to_exclude_from_interview_list
+
+    The following settings are usually best to leave undefined if you want
+    the ordinary behavior of your theme:
+    * PAGE_TITLE
+    * LOGO_URL
+    * LOGO_IMAGE_URL
+    * LOGO_IMAGE_ALT
+    * LOGO_TITLE_ROW_1
+    * LOGO_TITLE_ROW_2 (defaults to value from the metadata block)
+
+    And of course you can also override the YAML block by block if you want to
+    further customize it.
+---
+# clear playground errors
+objects:
+  - ex: DAEmpty
+  - AL_ORGANIZATION_HOMEPAGE: DAEmpty
+---
+metadata:
+  title: |
+    In progress forms
+  short title: |
+    In progress forms
+  temporary session: True
+---
+modules:
+  - docassemble.ALToolbox.misc
+---
+# These override the `metadata` above
+default screen parts:
+  title: |
+    ${ AL_ORGANIZATION_TITLE }
+  short title: |
+    ${ AL_ORGANIZATION_TITLE }
+
+  title url: |
+    ${ AL_ORGANIZATION_HOMEPAGE }
+
+  exit url: |
+    ${ AL_ORGANIZATION_HOMEPAGE }
+---
+event: section_in_progress_forms
+id: interview list
+question: |
+  In progress forms 
+  <span style="float: right;">${ action_button_html( showifdef("AL_ORGANIZATION_HOMEPAGE"), label=NEW_FORM_LABEL or word("Start a new form"), icon="plus-circle", color="primary", size="md") }</span>
+subquestion: |
+  % if len(get_saved_interview_list(filename=None, filename_to_exclude=al_session_store_default_filename, exclude_filenames=al_sessions_to_exclude_from_interview_list, exclude_newly_started_sessions=True)) > 0:
+  Tap the title of a form to keep working on it or to download your completed
+  documents.
+
+  ${ session_list_html(filename=None, limit=20, offset=session_page*20, exclude_filenames=al_sessions_to_exclude_from_interview_list, exclude_newly_started_sessions=True) }
+
+  <nav aria-label="Page navigation">
+    <ul class="pagination justify-content-center">
+  % if session_page > 0:
+      <li class="page-item"><a class="page-link" href="${ url_action("update_page_event", page_increment=-1) }">Previous</a></li>
+  % endif
+  % if len(get_saved_interview_list(filename=None, filename_to_exclude=al_session_store_default_filename, exclude_filenames=al_sessions_to_exclude_from_interview_list, limit=20, offset=session_page*20, exclude_newly_started_sessions=True)) >= 20:
+      <li class="page-item"><a class="page-link" href="${ url_action("update_page_event", page_increment=1) }">Next</a></li>
+  % endif
+    </ul>
+  </nav>  
+  % else:
+  You do not have any current forms in progress
+  % endif
+# TODO: might be able to save some DB queries here but performance is good
+section: section_in_progress_forms
+under: |
+  % if len(get_saved_interview_list(filename=None, filename_to_exclude=al_session_store_default_filename, exclude_filenames=al_sessions_to_exclude_from_interview_list)) > 0:
+  <div style="float: right;">
+  ${ action_button_html(url_action("interview_list_delete_all"), label=word("Delete All"), size="md", color="danger", icon="trash-can", id_tag="al-delete-all-sessions") }
+  </div>
+  % endif
+script:
+  <script type="text/javascript">
+      $(".al-delete-session").on('click', function(event){
+        if (confirm("${ word("Are you sure you want to delete this item?") }")){
+          return true;
+        }
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        return false;
+      });
+      $("#al-delete-all-sessions").on('click', function(event){
+        if (confirm("${ word("Are you sure you want to delete all saved interviews?") }")){
+          return true;
+        }
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        return false;
+      });
+  </script>
+---
+event: section_answer_sets
+id: answer set list
+question: |
+  Answer sets
+  <span style="float: right;">${ action_button_html( showifdef("AL_ORGANIZATION_HOMEPAGE"), label=NEW_FORM_LABEL or word("Start a new form"), icon="plus-circle", color="primary", size="md") }</span>
+subquestion: |
+  View, delete, or rename your answer sets below. To copy an answer set into a
+  new form:
+  
+  1. [${ NEW_FORM_LABEL or "Start a new form"}](${ showifdef("AL_ORGANIZATION_HOMEPAGE") })
+  1. Then, use the menu to load your answer set.
+
+  ${ interview_list_html(view_only=True, delete_action="interview_list_delete_session", exclude_newly_started_sessions=False) }
+section: section_answer_sets
+---
+code: |
+  session_page = 0
+---
+event: update_page_event
+code: |
+  session_page += action_argument("page_increment")
+---
+code: |
+  save_interview_answers(
+      source_filename=action_argument("filename"),
+      source_session=action_argument("session"),
+      metadata={
+        "title": al_sessions_copy_as_answer_set_label
+      },
+      original_interview_filename=action_argument("original_interview_filename"),        
+      )
+  log("Copied answers", "success")      
+  interview_list_copy_action = True
+---
+id: rename answer
+question: |
+  Rename saved answers
+fields:
+  - New name: al_sessions_snapshot_new_label
+    default: ${ action_argument("title") or "" }
+continue button label: |
+  :save: Save changes
+---
+only sets:
+  - interview_list_rename_action
+code: |
+  al_sessions_snapshot_new_label
+  try:
+      rename_interview_answers(action_argument("filename"), action_argument("session"), new_name = al_sessions_snapshot_new_label)
+      log(f"New name saved", "success")
+      session_page = 0 # Take back to first page where the renamed session will appear
+  except:
+      log("Problem saving new name", "danger")
+  interview_list_rename_action = True
+---
+code: |
+  interview_list(action="delete", filename=action_argument("filename"), session=action_argument("session"))  
+  log("Deleted answers", "success")
+  interview_list_delete_session = True
+---
+code: |
+  try:
+      interview_list(action="delete_all", query=(~DA.Or(DA.Sessions.filename == f"{user_info().current_package}:al_saved_sessions_store.yml", DA.Sessions.filename == "docassemble.AssemblyLine:data/questions/al_saved_sessions_store.yml")))
+      log("Deleted answers", "success")
+  except Exception as ex:
+      log("Problem deleting answers", "danger")
+      log(f"Problem deleting answers for a user: {ex}")
+  interview_list_delete_all = True
+---
+########### Get customized text values from configuration file ###################################33
+---
+code: al_sessions_to_exclude_from_interview_list = get_config("assembly line",{}).get("interview list",{}).get("exclude from interview list", get_config("assembly line",{}).get("exclude from interview list"))

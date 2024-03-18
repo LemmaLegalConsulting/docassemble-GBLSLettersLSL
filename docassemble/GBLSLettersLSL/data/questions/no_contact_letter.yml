@@ -1,0 +1,47 @@
+---
+include:
+  - docassemble.AssemblyLine:assembly_line.yml
+  - shared.yml
+---
+objects:
+  clients: ALPeopleList.using(there_are_any=True, complete_attribute = 'Complete')
+  attorneys: ALPeopleList.using(there_are_any=True, complete_attribute = 'Complete')
+  documents: ALPeopleList
+---
+###################### Order Block for No Contact Letter ######################
+code: | 
+  clients[0].name.first
+  clients[0].address.address
+  clients[0].phone_number
+  attorneys[0].name.first
+  attorneys[0].phone_number
+  attorneys[0].email
+  intake_complete  
+  if intake_complete == True:
+    intake_date
+    case_type
+  attempted_contact
+  final_contact_date
+  attorneys[0].signature
+  
+  interview_order_no_contact_letter = True
+---
+id: failed contact attempts
+question: |
+  Describe your contact attempts.
+fields:  
+  - Describe the attempts you made to contact the client: attempted_contact
+    datatype: area
+    hint: I called you and left a voicemail at ${clients[0].phone_number} each day last week, and sent two emails to ${clients[0].email}, your email address.
+---
+#validation needed to make it fall on Monday-Friday only
+#adding default not working
+id: no contact deadline
+question: |
+  What is the date you will you close the case file, if the client doesn't contact you by?
+fields:
+  - Final date to contact: final_contact_date
+    datatype: date
+    default: |
+      $ { today().plus(days=14) }
+---

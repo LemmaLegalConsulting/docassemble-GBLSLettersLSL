@@ -1,0 +1,50 @@
+---
+include:
+  - docassemble.AssemblyLine:assembly_line.yml
+  - shared.yml
+---
+objects:
+  clients: ALPeopleList.using(there_are_any=True, complete_attribute = 'Complete')
+  attorneys: ALPeopleList.using(there_are_any=True, complete_attribute = 'Complete')
+  documents: ALPeopleList
+---
+###################### Order Block for Client Letter 341 Bankruptcy Telephonic Meeting ######################
+code: | 
+  clients[0].name.first
+  attorneys[0].name.first
+  attorneys[0].signature
+  attorneys[0].phone_number
+  attorneys[0].email
+  appointment_date
+  payment_first_date
+  
+  interview_order_client_letter_re_telephonic = True
+---
+id: payment deadlines for 341 bankruptcy
+question: |
+  What are the deadlines for the each installment of the filing fee?
+fields:
+  - First payment: payment_first_date
+    datatype: date
+  - Second payment: payment_second_date
+    datatype: date
+  - Third payment: payment_third_date
+    datatype: date
+---
+# potential issue with this, might need a variable specific to the 341 form
+# assuming we want context specific questions for different meetings
+# having a general use appointment date and time variables might be a problem
+# though could maybe add objects to specify meeting purpose
+# then have contextualized questions for the objects
+id: setting appointment date variable
+question: |
+  What is the date and time for the appointment?
+fields:
+  - Appointment date: appointment_date
+    datatype: date
+  - Is there a time set for the appointment yet?: time_set
+    datatype: yesnoradio
+  - Appointment time: appointment_time
+    datatype: time
+    show if: time_set
+---

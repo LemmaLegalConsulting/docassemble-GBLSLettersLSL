@@ -1,0 +1,43 @@
+---
+include:
+  - docassemble.AssemblyLine:assembly_line.yml
+  - shared.yml
+---
+objects:
+  clients: ALPeopleList.using(there_are_any=True, complete_attribute='complete')
+  attorneys: ALPeopleList.using(there_are_any=True, complete_attribute='complete')
+  documents: ALPeopleList
+---
+#interview order for plain language retainer
+code: |
+  legal_problems
+  clients[0].name.first
+  clients[0].signature
+  attorneys[0].name.first
+  attorneys[0].signature
+    
+  interview_order_plain_langauge_retainer = True
+---
+id: legal problems
+question: |
+  What legal issue are you assisting with?
+subquestion: |
+  This will be in one of your documents.
+  
+  "${ clients[0].name } and GBLS agree that GBLS will provide legal help with [FIELD legal_problems]." 
+fields:
+  - no label: legal_problems
+---
+attachments:
+  - name: Plain Language Retainer
+    filename: Plain_Language_Retainer.docx  
+    variable name: Plain_Language_Retainer[i]      
+    skip undefined: True
+    docx template file: Plain_Language_Retainer.docx
+---
+objects:
+  - Plain_Language_Retainer: ALDocument.using(title="Plain Language Retainer", filename="Plain_Language_Retainer.docx", has_addendum=False, default_overflow_message=AL_DEFAULT_OVERFLOW_MESSAGE)
+---
+objects:
+ - al_court_bundle: ALDocumentBundle.using(elements=[Plain_Lanuage_Retainer_Document], filename="documents.docx", title="All forms to download for your records", enabled=True) 
+---

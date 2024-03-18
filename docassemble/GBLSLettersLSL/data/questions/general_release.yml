@@ -1,0 +1,28 @@
+---
+include:
+  - docassemble.AssemblyLine:assembly_line.yml
+  - shared.yml
+---
+objects:
+  clients: ALPeopleList.using(there_are_any=True, complete_attribute = 'Complete')
+  attorneys: ALPeopleList.using(there_are_any=True, complete_attribute = 'Complete')
+  documents: ALPeopleList
+---
+###################### Order Block for General Release ######################
+code: | 
+  clients[0].name.first
+  clients[0].signature
+  
+  attorneys[0].name.first
+  
+  law_firm
+  
+  interview_order_general_release = True
+---
+id: roi question for source of info
+question: |
+  What entity has the records you need access to? 
+fields:
+  - no label: law_firm
+    hint: e.g., Somerville Housing Authority
+---

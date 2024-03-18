@@ -1,0 +1,30 @@
+---
+include:
+  - docassemble.AssemblyLine:assembly_line.yml
+  - shared.yml
+---
+objects:
+  clients: ALPeopleList.using(there_are_any=True, complete_attribute = 'Complete')
+  attorneys: ALPeopleList.using(there_are_any=True, complete_attribute = 'Complete')
+  documents: ALPeopleList
+---
+###################### Order Block for Client Letter for Documents Preparing for the Interview ######################
+code: |
+  clients[0].name.first
+  clients[0].address.address
+  children[0].name.first
+  appointment_date
+  attorneys[0].name.first
+  attorneys[0].address.address
+  attorneys[0].phone_number
+  attorneys[1].name
+
+  interview_order_client_letter_appointment_reminder = True
+---
+id: Spanish Speaking Attorney
+question: |
+  Who is the Spanish speaking Attorney that %{ clients.name } should ask for if they need to call with questions?
+fields:
+  - no label: attorneys[1].name
+---
+  

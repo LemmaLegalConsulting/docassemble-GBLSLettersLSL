@@ -1,0 +1,39 @@
+---
+include:
+  - docassemble.AssemblyLine:assembly_line.yml
+  - shared.yml
+---
+objects:
+  clients: ALPeopleList.using(there_are_any=True, complete_attribute = 'Complete')
+  attorneys: ALPeopleList.using(there_are_any=True, complete_attribute = 'Complete')
+  documents: ALPeopleList
+---
+###################### Order Block for Client Letter for Documents Preparing for the Interview ######################
+code: |
+  clients[0].name.first
+  clients[0].address.address
+  attorneys[0].name.first
+  attorneys[0].phone_number
+  attorneys[0].email
+  attorneys[0].signature  
+  documents_for_interview
+  
+  interview_order_client_letter_documents_for_interview = True
+---
+id: letter to client to prepare for interview
+question: |
+  Chose the items you want the client to bring to the initial interview.
+fields:
+  - no label: documents_for_interview
+    datatype: checkboxes
+    choices:
+      - Social Security Card or letter from Social Security showing your Social Security number
+      - Driver’s License or other Picture ID
+      -	Any papers concerning debts
+      -	Any papers concerning lawsuits the client is invovled in.
+      -	If divorced, a copy of the divorce decree and any child support/alimony orders.
+      -	Copies of  bank statements for up to a year ago.
+      -	Copies of pay stubs for this year.
+      -	Social Security, pension, unemployment, or any type of welfare/public benefits payments documents.
+      -	Tax returns for last two years.
+---

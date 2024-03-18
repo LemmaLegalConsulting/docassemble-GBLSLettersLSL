@@ -1,0 +1,241 @@
+###################### Questions Used Throughout All Interviews/Forms ######################
+comment: If you need one of theses questions to be different for a specific form you should create an edited version within the YML for that form.
+---
+include:
+  - docassemble.AssemblyLine:assembly_line.yml
+  - no_contact_letter.yml
+  - plain_language_retainer.yml
+  - general_release.yml
+  - closing_letter.yml
+  - affirmative_debt_collection_retainer.yml
+  - client_letter_documents_for_interview.yml
+  - client_letter_final_credit_report.yml
+  - client_letter_re_telephonic.yml
+  - client_letter_appointment_reminder.yml
+  - client_letter_bankruptcy_discharge.yml
+---
+id: clients name
+sets:
+  - clients[0].name.first
+  - clients[0].name.last
+  - clients[0].name.middle
+  - clients[0].name.suffix
+question: |
+  What is the clients name? 
+fields:
+  - code: |
+      clients[0].name_fields()
+---
+id: persons contact information
+question: |
+  What is ${ clients[0].name }'s contact info?
+fields:
+  - Phone: clients[0].phone_number
+    code: |
+      client_potential_numbers
+  - Email: clients[0].email
+---
+sets:
+  - clients[0].name.first
+  - clients[0].name.last
+  - clients[0].name.middle
+  - clients[0].name.suffix
+code: |
+  clients[0] = client.copy_deep('clients[0]')
+  if not defined('clients[0].name.first'):
+    clients[0].name.first = clients[0].name.text
+---
+sets:
+  - other_parties[i].name.first
+  - other_parties[i].name.last
+  - other_parties[i].name.middle
+  - other_parties[i].name.suffix
+code: |
+  for index in range(0,len(legalserver_adverse_parties)):
+    other_parties[i] = legalserver_adverse_parties[i].copy_deep('other_parties[i]')
+  for op in other_parties:
+    if not defined('op.name.first'):
+      op.name.first = op.name.text
+---
+code: |
+  other_parties.there_is_another = False
+    
+---
+id: name of advocate
+sets:
+  - attorneys[0].name.first
+  - attorneys[0].name.last
+  - attorneys[0].name.middle
+  - attorneys[0].name.suffix
+generic object: ALPeopleList
+question: |
+  Who is the advocate sending these documents?
+fields:
+  - code: |
+      attorneys[0].name_fields()
+---
+id: advocate contact info
+sets:
+  - attorneys[0].phone_number
+  - attorneys[0].email
+generic object: ALPeopleList
+question: |
+  Contact info for ${ attorneys[0].name } 
+fields:
+  - Phone: attorneys[0].phone_number
+    code: |
+      attorney_potential_numbers
+    show if:
+      code: |
+        len(attorney_potential_numbers) > 0
+  - Phone: attorneys[0].phone_number
+    show if:
+      code: |
+        len(attorney_potential_numbers) == 0
+  - Email: attorneys[0].email
+---
+code: |
+  client_potential_numbers = list()
+  for pn in ["home_number","work_number","mobile_number"]:
+    if hasattr(clients[0],pn):
+      client_potential_numbers.append(getattr(clients[0],pn))
+    if len(client_potential_numbers) == 1:
+      clients[0].phone_number = client_potential_numbers[0]
+  client_phone_numbers_collected = True
+---
+code: |
+  attorney_potential_numbers = list()
+  for pn in ["home_number","work_number","mobile_number"]:
+    if hasattr(attorneys[0],pn):
+      attorney_potential_numbers.append(getattr(attorneys[0],pn))
+    if len(attorney_potential_numbers) == 1:
+      attorneys[0].phone_number = attorney_potential_numbers[0]
+  attorney_phone_numbers_collected = True
+---
+code: |
+  client_phone_numbers_collected
+  attorney_phone_numbers_collected
+  phone_numbers_collected = True
+---
+if: len(potential_recipients) > 1
+question: |
+  Who is the attorney?
+fields:
+  - Attorney: client_message_planned_recipient
+    datatype: radio
+    code: |
+      potential_recipients
+id: planned_recipient
+---
+if: len(potential_recipients) == 1
+code: |
+  for key in potential_recipients[0].keys():
+    client_message_planned_recipient = key
+---
+code: |
+  potential_recipients = []
+  potential_recipients.append({'primary': legalserver_primary_assignment.name.full() + ', Primary Assignment' })
+  if legalserver_primary_assignment.email != legalserver_current_user.email:
+    potential_recipients.append({'current': legalserver_current_user.name.full() + ', Current User' })
+  if number_of_pro_bono_assignments > 0:
+    potential_recipients.append({'first_pro_bono': legalserver_first_pro_bono_assignment.name.full() + ', First Pro Bono User' })
+    if number_of_pro_bono_assignments > 1:
+      potential_recipients.append({'latest_pro_bono': legalserver_latest_pro_bono_assignment.name.full() + ', Latest Pro Bono User' })
+---
+id: name of advocate code
+sets:
+  - attorneys[0].name.first
+  - attorneys[0].name.last
+  - attorneys[0].name.middle
+  - attorneys[0].name.suffix
+code: |
+  if client_message_planned_recipient == 'primary':
+    attorneys[0] = legalserver_primary_assignment.copy_deep('attorneys[0]')
+  elif client_message_planned_recipient == 'current':
+    attorneys[0] = legalserver_current_user.copy_deep('attorneys[0]')
+  elif client_message_planned_recipient == 'first_pro_bono':
+    attorneys[0] = legalserver_first_pro_bono_assignment.copy_deep('attorneys[0]')
+  elif client_message_planned_recipient == 'latest_pro_bono':
+    attorneys[0] = legalserver_latest_pro_bono_assignment.copy_deep('attorneys[0]')
+  recipient_copied = True
+---
+variable name: office_addresses
+use objects: objects
+data:
+  object: ALAddress
+  module: docassemble.AssemblyLine.al_general
+  items:
+    - address: 197 Friend St.
+      city: Boston
+      state: MA
+      zip: "02114"
+      country: US
+    - address: 60 Gore St.
+      city: Cambridge
+      unit: Suite 203
+      state: MA
+      zip: "02141"
+      country: US
+---
+sets:
+  - attorneys[0].address.address
+  - attorneys[0].address.city
+  - attorneys[0].address.zip
+  - attorneys[0].address.unit
+  - attorneys[0].address.state
+  - attorneys[0].address.country
+code: |
+  if unit == "CASLS":
+    attorneys[0].address = office_addresses[1]
+  else:
+    attorneys[0].address = office_addresses[0]
+---
+id: case type
+question: |
+  What is the case type?
+field: case_type
+dropdown:
+  - Small Claims
+  - Bankruptcy
+---
+id: intake status and date
+question: |
+  Have you conducted an intake with ${ clients[0].name.first } yet?
+fields:
+  - Did you do an intake?: intake_complete
+    datatype: yesnoradio
+  - When was the intake?: intake_date
+    datatype: date
+    show if: intake_complete
+    required: False
+---
+id: any debts not discharged
+question: |
+  Does the client have any debts that have not been discharged?
+fields:
+  - no label: any_debts_not_discharged
+    datatype: yesnoradio
+---
+question: |
+  Fill in the blanks. 
+subquestion: |
+  This will be on the letter you send. 
+  
+  "This means that you are no longer legally obligated to pay the debts we listed, but [FIELD debts_not_discharged] are not discharged debts." 
+fields:
+  - Debts not discharged?: debts_not_discharged
+  - Are any of the remaining debts unsecured?: any_secured_debts
+    datatype: yesnoradio
+---
+id: download documents
+event: gbls_download
+question: |
+  All done
+subquestion: |
+  
+  ${ al_court_bundle.download_list_html(format='docx',view=False) }
+  
+
+
+progress: 100
+---

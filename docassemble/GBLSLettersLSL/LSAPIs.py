@@ -449,7 +449,7 @@ def get_legalserver_token(*, legalserver_site: str) -> Dict[str, str]:
     Raises:
         Exception: if either there are no API credentials or the API Credentials have expired.
     """
-    apikey = docassemble.base.functions.get_config("legalserver").get(
+    apikey = docassemble.base.functions.get_config("legalserver", {}).get(
         legalserver_site.lower()
     )
     if apikey is None:
@@ -474,7 +474,7 @@ def check_legalserver_token(*, legalserver_site: str) -> Dict:
         Dictionary. Key named error is included if there is an error. Otherwise a
             key named no_error is included. The key contains the details for the error.
     """
-    apikey = docassemble.base.functions.get_config("legalserver").get(
+    apikey = docassemble.base.functions.get_config("legalserver", {}).get(
         legalserver_site.lower()
     )
     if apikey is None:

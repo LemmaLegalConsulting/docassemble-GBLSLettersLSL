@@ -54,7 +54,7 @@ setup(name='docassemble.GBLSLettersLSL',
       url='https://docassemble.org',
       packages=find_packages(),
       namespace_packages=['docassemble'],
-      install_requires=[],
+      install_requires=['docassemble.AssemblyLine', 'requests', 'pycountry', 'defusedxml'],
       zip_safe=False,
       package_data=find_package_data(where='docassemble/GBLSLettersLSL/', package='docassemble.GBLSLettersLSL'),
      )

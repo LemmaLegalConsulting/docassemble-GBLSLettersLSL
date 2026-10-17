@@ -71,28 +71,28 @@ subquestion: |
   
   % endfor
   
-  legalserver_assignments	DAList of Individual objects
+  legalserver_assignments DAList of Individual objects
 
   % for key in legalserver_assignments[0].as_serializable().keys():
   ${ key }
   
   % endfor
 
-  legalserver_current_user	Individual
+  legalserver_current_user  Individual
   
   % for key in legalserver_current_user.as_serializable().keys():
   
   ${ key }
   % endfor
   
-  legalserver_primary_assignment	Individual
+  legalserver_primary_assignment  Individual
   
   % for key in legalserver_primary_assignment.as_serializable().keys():
   
   ${ key }
   % endfor
   
-  legalserver_pro_bono_assignments	DAList using Individual objects
+  legalserver_pro_bono_assignments  DAList using Individual objects
   
   % for key in legalserver_assignments[0].as_serializable().keys():
   
